@@ -14,8 +14,7 @@ async fn main() {
         eprintln!("Provide filename as cmd arg!");
         return;
     }
-    let contents = fs::read_to_string(filename).expect("Unable to read file");
-    println!("Contents: {}", contents);
+    let contents = fs::read(filename).expect("Unable to read file");
     let data = Cursor::new(contents);
 
     let client = IpfsClient::default();
