@@ -40,7 +40,7 @@ async fn main() {
     let web3 = web3::Web3::new(transport);
     //let contract_abi = "build/StoreCID.abi";
     let contract_address: web3::types::H160 =
-        hex!("29cC4ecB8bbDBCF2d31bef45181c290952f2369B").into();
+        hex!("FadF67B8eB694977C4602A9bdda23E5F3Ab19EF1").into();
 
     let contract = web3::contract::Contract::from_json(
         web3.eth(),
@@ -48,16 +48,18 @@ async fn main() {
         include_bytes!("../build/StoreCID.abi"),
     )
     .unwrap();
-    let address_from = hex!("4beE06f55345dEB02119E39f4c791018F3FAb8A6").into();
+    let address_from = hex!("B9ce73A5CaA58aE1720A5529FaC1e306fD5EC827").into();
 
     println!("Publishing CID: {}", cid);
 
+    let mut transaction_options = web3::contract::Options::default();
+    transaction_options.gas = Some(web3::types::U256::from_dec_str("3000000").unwrap());
     let result_hash = contract
         .call(
             "addCID",
             cid,
             address_from,
-            web3::contract::Options::default(),
+            transaction_options,
         )
         .await
         .unwrap();
