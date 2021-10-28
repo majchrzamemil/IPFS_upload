@@ -23,4 +23,11 @@ async fn main() {
         Ok(res) => println!("{}", res.hash),
         Err(e) => eprintln!("error adding file: {}", e),
     }
+
+    //WEB3 part
+    //To pass via env: http transport, account, smart contract address(might set defaults)
+
+    let transport = web3::transports::Http::new("http://localhost:8545").unwrap();
+    let web3 = web3::Web3::new(transport);
+
 }

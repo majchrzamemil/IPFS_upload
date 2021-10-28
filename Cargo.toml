@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 actix-rt = "2.3.0"
 ipfs-api-backend-actix = "0.3"
+web3 = "0.17.0"
