@@ -1,8 +1,11 @@
-use hex_literal::hex;
 use ipfs_api_backend_actix::{IpfsApi, IpfsClient};
 use std::env;
+use std::error::Error;
 use std::fs;
 use std::io::Cursor;
+use std::time::Duration;
+use web3::contract::Contract;
+use web3::contract::Options;
 
 /// Returns CID of uploaded file
 ///
@@ -33,32 +36,30 @@ async fn upload_to_ipsf(filename: &String) -> Option<String> {
 /// # Arguments
 ///
 /// *'cid' - CID which sould be stored in hardcoded smart contract
-async fn push_cid(cid: String) {
-    let transport = web3::transports::Http::new("http://localhost:8545").unwrap();
+async fn push_cid(cid: String) -> Result<web3::types::H256, Box<dyn Error>> {
+    let transport = web3::transports::Http::new("http://localhost:7545")?;
     let web3 = web3::Web3::new(transport);
 
-    // This field should be configurable, but due to lack of requirements left hardcoded
-    let contract_address: web3::types::H160 =
-        hex!("FadF67B8eB694977C4602A9bdda23E5F3Ab19EF1").into();
+    //account
+    let accounts = web3.eth().accounts().await?;
 
-    // There is a need to build StoreCID contract before running
-    let contract = web3::contract::Contract::from_json(
-        web3.eth(),
-        contract_address,
-        include_bytes!("../build/StoreCID.abi"),
-    )
-    .unwrap();
+    let bytecode = include_str!("../build/StoreCID.bin");
 
-    // This field should be configurable, but due to lack of requirements left hardcoded
-    let address_from = hex!("B9ce73A5CaA58aE1720A5529FaC1e306fD5EC827").into();
+    let contract = Contract::deploy(web3.eth(), include_bytes!("../build/StoreCID.abi"))?
+        .confirmations(0)
+        .poll_interval(Duration::from_secs(1))
+        .options(Options::with(|opt| opt.gas = Some(3_000_000.into())))
+        .execute(bytecode, (), accounts[0])
+        .await?;
+
+    println!("contract: {}", contract.address());
 
     let mut transaction_options = web3::contract::Options::default();
     transaction_options.gas = Some(web3::types::U256::from_dec_str("3000000").unwrap());
     let result_hash = contract
-        .call("addCID", cid, address_from, transaction_options)
-        .await
-        .unwrap();
-    println!("Transaction hash: {}", result_hash);
+        .call("addCID", cid, accounts[1], transaction_options)
+        .await?;
+    Ok(result_hash)
 }
 
 #[actix_rt::main]
@@ -74,7 +75,10 @@ async fn main() {
     }
 
     match upload_to_ipsf(filename).await {
-        Some(cid) => push_cid(cid).await,
+        Some(cid) => match push_cid(cid).await {
+            Ok(hash) => println!("Result hash: {}", hash),
+            Err(err) => println!("Error:{}", err),
+        },
         None => {
             return;
         }
